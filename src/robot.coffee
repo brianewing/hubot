@@ -152,15 +152,13 @@ class Robot
   #
   # Returns nothing.
   receive: (message) ->
-    results = []
+    handled = false
+
     for listener in @listeners
-      try
-        results.push listener.call(message)
-        break if message.done
-      catch error
-        @logger.error "Unable to call the listener: #{error}\n#{error.stack}"
-        false
-    if message not instanceof CatchAllMessage and results.indexOf(true) is -1
+      handled = true if listener.call(message)
+      break if message.done
+
+    if message not instanceof CatchAllMessage and not handled
       @receive new CatchAllMessage(message)
 
   # Public: Loads a file in path.

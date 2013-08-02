@@ -1,4 +1,5 @@
 {inspect} = require 'util'
+domain = require 'domain'
 
 {TextMessage} = require './message'
 
@@ -11,6 +12,9 @@ class Listener
   #            callback.
   # callback - A Function that is triggered if the incoming message matches.
   constructor: (@robot, @matcher, @callback) ->
+    @domain = domain.create()
+    @domain.on 'error', (error) =>
+      @robot.logger.error "Error while listener handled message: #{error}\n#{error.stack}"
 
   # Public: Determines if the listener likes the content of the message. If
   # so, a Response built from the given Message is passed to the Listener
@@ -24,7 +28,7 @@ class Listener
       @robot.logger.debug \
         "Message '#{message}' matched regex /#{inspect @regex}/" if @regex
 
-      @callback new @robot.Response(@robot, message, match)
+      @domain.run => @callback(new @robot.Response(@robot, message, match))
       true
     else
       false
@@ -38,6 +42,8 @@ class TextListener extends Listener
   #            callback.
   # callback - A Function that is triggered if the incoming message matches.
   constructor: (@robot, @regex, @callback) ->
+    super
+
     @matcher = (message) =>
       if message instanceof TextMessage
         message.match @regex
